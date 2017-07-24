@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class BlockManager : MonoBehaviour {
-    //this is a comment
     public int width = 10;
     public int height = 10;
     public GameObject blockPrefab;
