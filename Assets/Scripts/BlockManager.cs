@@ -16,6 +16,7 @@ public class BlockManager : MonoBehaviour {
     int chunksVisibleInRenderDistance;
     public int blockCount = 0;
     public float renderDistance = 64;
+    Vector2 previousPlayerChunkCoords;
 
     // Use this for initialization
     void Start () {
@@ -23,11 +24,7 @@ public class BlockManager : MonoBehaviour {
         chunks = new Dictionary<Vector2, Chunk>();
         previouslyRenderedChunks = new List<Chunk>();
         blocks = new Dictionary<Vector3, Block>();
-        for (int i = -width / 2; i < width / 2; i++) {
-            for (int j = -height / 2; j < height / 2; j++) {
-                GenerateChunk(new Vector2(i, j));
-            }
-        }
+        previousPlayerChunkCoords = new Vector2(1234,1234);
 	}
 	
     public void BlockClick(bool breaking,RaycastHit hit) {
@@ -119,9 +116,38 @@ public class BlockManager : MonoBehaviour {
     }
     */
 
+    void UpdateVisibleChunks() {
+
+        Vector2 playerCoords = new Vector2(Mathf.Round(player.transform.position.x / CHUNKSIZE), Mathf.Round(player.transform.position.z / CHUNKSIZE));
+        if (playerCoords == previousPlayerChunkCoords) {
+            return;
+        } else {
+            Debug.Log("Chunk was entered by player: " + playerCoords);
+        }
+        foreach (Chunk chunk in previouslyRenderedChunks) {
+            chunk.SetVisible(false);
+        }
+        previouslyRenderedChunks.Clear();
+
+        for (int x = -chunksVisibleInRenderDistance; x < chunksVisibleInRenderDistance; x++) {
+            for (int y = -chunksVisibleInRenderDistance; y < chunksVisibleInRenderDistance; y++) {
+                Vector2 currentChunkCoord = new Vector2(playerCoords.x + x, playerCoords.y + y);
+                if (chunks.ContainsKey(currentChunkCoord)) {
+                    chunks[currentChunkCoord].UpdateChunkVisibility(player.transform.position, renderDistance);
+                    if (chunks[currentChunkCoord].gameObject.activeSelf) {
+                        previouslyRenderedChunks.Add(chunks[currentChunkCoord]);
+                    }
+                } else {
+                    previouslyRenderedChunks.Add(GenerateChunk(currentChunkCoord));
+                }
+            }
+        }
+        previousPlayerChunkCoords = playerCoords;
+    }
+
     // Update is called once per frame
     void Update () {
-        //UpdateVisibleChunks();
+        UpdateVisibleChunks();
 	}
 
  
@@ -163,7 +189,7 @@ public class Chunk {
 
     public void UpdateChunkVisibility(Vector3 playerPos, float renderDistance) {
         float viewerClosestDist = Mathf.Sqrt(bounds.SqrDistance(playerPos));
-        bool visible = viewerClosestDist >= renderDistance;
+        bool visible = viewerClosestDist <= renderDistance;
         SetVisible(visible);
     }
 
