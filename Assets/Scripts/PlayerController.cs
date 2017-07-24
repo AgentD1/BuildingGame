@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour {
 
@@ -19,9 +20,11 @@ public class PlayerController : MonoBehaviour {
     public float reach = 4f;
     public BlockManager blockManager;
     public LayerMask mask;
+    public int blockID = 0;
     bool mouse1down = false;
     bool mouse2down = false;
-    
+    public Text BlockIDText;
+
     void Start () {
         rb = GetComponent<Rigidbody>();
         distToGround = GetComponent<Collider>().bounds.extents.y;
@@ -29,6 +32,18 @@ public class PlayerController : MonoBehaviour {
 
     void Update() {
 
+        if (Input.GetKeyDown(KeyCode.Z)) {
+            if (BlockManager.blockTypes.Length - 1 != blockID) {
+                blockID++;
+                BlockIDText.text = "Block: " + BlockManager.blockTypes[blockID].name;
+            }
+        }
+        if (Input.GetKeyDown(KeyCode.X)) {
+            if (blockID > 0) {
+                blockID--;
+                BlockIDText.text = "Block: " + BlockManager.blockTypes[blockID].name;
+            }
+        }
         if (Input.GetMouseButtonDown(0)) {
             mouse1down = true;
         }
@@ -64,7 +79,7 @@ public class PlayerController : MonoBehaviour {
             RaycastHit hit;
             Ray ray = cameraGO.GetComponent<Camera>().ScreenPointToRay(new Vector3(cameraGO.GetComponent<Camera>().pixelWidth/2, cameraGO.GetComponent<Camera>().pixelHeight / 2, 0f));  //new Ray(cameraGO.transform.position, cameraGO.transform.rotation.eulerAngles);
             if(Physics.Raycast(ray, out hit, reach, mask)) {
-                blockManager.BlockClick(false, hit);
+                blockManager.BlockClick(false, hit, blockID);
             }
             mouse1down = false;
         }
@@ -72,7 +87,7 @@ public class PlayerController : MonoBehaviour {
             RaycastHit hit;
             Ray ray = cameraGO.GetComponent<Camera>().ScreenPointToRay(new Vector3(cameraGO.GetComponent<Camera>().pixelWidth / 2, cameraGO.GetComponent<Camera>().pixelHeight / 2, 0f));  //new Ray(cameraGO.transform.position, cameraGO.transform.rotation.eulerAngles);
             if (Physics.Raycast(ray, out hit, reach, mask)) {
-                blockManager.BlockClick(true, hit);
+                blockManager.BlockClick(true, hit, blockID);
             }
             mouse2down = false;
         }

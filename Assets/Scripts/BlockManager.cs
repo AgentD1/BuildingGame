@@ -17,6 +17,7 @@ public class BlockManager : MonoBehaviour {
     public int blockCount = 0;
     public float renderDistance = 64;
     Vector2 previousPlayerChunkCoords;
+    public static BlockType[] blockTypes = { new BlockType(Color.white), new BlockType(Color.red), new BlockType(Color.yellow), new BlockType(Color.cyan), new BlockType(Color.black), new BlockType(Color.blue) };
     
     void Start () {
         chunksVisibleInRenderDistance = Mathf.RoundToInt(renderDistance / CHUNKSIZE);
@@ -26,13 +27,14 @@ public class BlockManager : MonoBehaviour {
         previousPlayerChunkCoords = new Vector2(1234,1234);
 	}
 	
-    public void BlockClick(bool breaking,RaycastHit hit) {
+    public void BlockClick(bool breaking, RaycastHit hit, int id) {
         if (breaking) {
             DestroyBlock(hit.transform.position);
         } else {
             int clickChunkCoordX = Mathf.CeilToInt(player.transform.position.x / CHUNKSIZE);
             int clickChunkCoordY = Mathf.CeilToInt(player.transform.position.z / CHUNKSIZE);
             CreateBlock(hit.transform.position + hit.normal);
+            blocks[hit.transform.position + hit.normal].gameObject.GetComponent<MeshRenderer>().material.color = blockTypes[id].color;
         }
         
     }
@@ -88,7 +90,6 @@ public class BlockManager : MonoBehaviour {
     }
 
     void UpdateVisibleChunks() {
-
         Vector2 playerCoords = new Vector2(Mathf.Round(player.transform.position.x / CHUNKSIZE), Mathf.Round(player.transform.position.z / CHUNKSIZE));
         if (playerCoords == previousPlayerChunkCoords) {
             return;
@@ -163,5 +164,14 @@ public class Chunk {
     public void SetVisible(bool isVisible) {
         gameObject.SetActive(isVisible);
     }
+    
+}
 
+public class BlockType {
+    public Color color;
+    public string name;
+    public BlockType(Color c) {
+        color = c;
+        name = color.ToString();
+    }
 }
