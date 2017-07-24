@@ -21,6 +21,7 @@ public class BlockManager : MonoBehaviour {
     public float scale = 0.025f;
     public float heightMultiplier = 15f;
     public Vector2 offset;
+    public int blockBottom;
 
     void Start () {
         chunksVisibleInRenderDistance = Mathf.RoundToInt(renderDistance / CHUNKSIZE);
@@ -50,7 +51,10 @@ public class BlockManager : MonoBehaviour {
         for (int x = -CHUNKSIZE / 2; x < CHUNKSIZE / 2 + 1; x++) { 
             for (int y = -CHUNKSIZE / 2; y < CHUNKSIZE / 2 + 1; y++) {
                 //CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), 0, y + (position.y * CHUNKSIZE)));
-                CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)) + offset, scale, heightMultiplier), y + (position.y * CHUNKSIZE)));
+                for (int i = blockBottom; i < TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)) + offset, scale, heightMultiplier); i++) {
+                    CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), i, y + (position.y * CHUNKSIZE)));
+                }
+                
             }
         }
         return chunks[position];
