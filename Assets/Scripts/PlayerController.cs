@@ -31,6 +31,18 @@ public class PlayerController : MonoBehaviour {
     }
 
     void Update() {
+        float y = Input.GetAxis("Vertical") * movementSpeed;
+        float x = Input.GetAxis("Horizontal") * movementSpeed;
+
+        rb.velocity = transform.TransformDirection(new Vector3(x, rb.velocity.y, y));
+
+        float rotationX = transform.localEulerAngles.y + Input.GetAxis("Mouse X") * sensitivityX;
+
+        rotationY += Input.GetAxis("Mouse Y") * sensitivityY;
+        rotationY = Mathf.Clamp(rotationY, minimumY, maximumY);
+
+        transform.localEulerAngles = new Vector3(0, rotationX, 0);
+        cameraGO.transform.localEulerAngles = new Vector3(-rotationY, 0, 0);
 
         if (Input.GetKeyDown(KeyCode.Z)) {
             if (BlockManager.blockTypes.Length - 1 != blockID) {
@@ -62,19 +74,6 @@ public class PlayerController : MonoBehaviour {
     }
     
     void FixedUpdate () {
-        float y = Input.GetAxis("Vertical") * movementSpeed;
-        float x = Input.GetAxis("Horizontal") * movementSpeed;
-
-        rb.velocity = transform.TransformDirection(new Vector3(x, rb.velocity.y, y));
-
-        float rotationX = transform.localEulerAngles.y + Input.GetAxis("Mouse X") * sensitivityX;
-
-        rotationY += Input.GetAxis("Mouse Y") * sensitivityY;
-        rotationY = Mathf.Clamp(rotationY, minimumY, maximumY);
-
-        transform.localEulerAngles = new Vector3(0, rotationX, 0);
-        cameraGO.transform.localEulerAngles = new Vector3(-rotationY, 0, 0);
-        Debug.DrawRay(cameraGO.transform.position, cameraGO.transform.rotation.eulerAngles);
         if (mouse1down) {
             RaycastHit hit;
             Ray ray = cameraGO.GetComponent<Camera>().ScreenPointToRay(new Vector3(cameraGO.GetComponent<Camera>().pixelWidth/2, cameraGO.GetComponent<Camera>().pixelHeight / 2, 0f));  //new Ray(cameraGO.transform.position, cameraGO.transform.rotation.eulerAngles);

@@ -18,14 +18,19 @@ public class BlockManager : MonoBehaviour {
     public float renderDistance = 64;
     Vector2 previousPlayerChunkCoords;
     public static BlockType[] blockTypes = { new BlockType(Color.white), new BlockType(Color.red), new BlockType(Color.yellow), new BlockType(Color.cyan), new BlockType(Color.black), new BlockType(Color.blue) };
-    
+    public float scale = 0.025f;
+    public float heightMultiplier = 15f;
+    public Vector2 offset;
+
     void Start () {
         chunksVisibleInRenderDistance = Mathf.RoundToInt(renderDistance / CHUNKSIZE);
         chunks = new Dictionary<Vector2, Chunk>();
         previouslyRenderedChunks = new List<Chunk>();
         blocks = new Dictionary<Vector3, Block>();
         previousPlayerChunkCoords = new Vector2(1234,1234);
-	}
+        offset = new Vector2(Random.Range(-100000, 100000), Random.Range(-100000, 100000));
+
+    }
 	
     public void BlockClick(bool breaking, RaycastHit hit, int id) {
         if (breaking) {
@@ -45,7 +50,7 @@ public class BlockManager : MonoBehaviour {
         for (int x = -CHUNKSIZE / 2; x < CHUNKSIZE / 2 + 1; x++) { 
             for (int y = -CHUNKSIZE / 2; y < CHUNKSIZE / 2 + 1; y++) {
                 //CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), 0, y + (position.y * CHUNKSIZE)));
-                CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)),0.02567834f,15), y + (position.y * CHUNKSIZE)));
+                CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)) + offset, scale, heightMultiplier), y + (position.y * CHUNKSIZE)));
             }
         }
         return chunks[position];
