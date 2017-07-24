@@ -21,20 +21,18 @@ public class PlayerController : MonoBehaviour {
     public LayerMask mask;
     bool mouse1down = false;
     bool mouse2down = false;
-
-    // Use this for initialization
+    
     void Start () {
         rb = GetComponent<Rigidbody>();
         distToGround = GetComponent<Collider>().bounds.extents.y;
     }
 
-
     void Update() {
-
 
         if (Input.GetMouseButtonDown(0)) {
             mouse1down = true;
         }
+
         if (Input.GetMouseButtonDown(1)) {
             mouse2down = true;
         }
@@ -48,7 +46,6 @@ public class PlayerController : MonoBehaviour {
         }
     }
     
-    // Update is called once per frame
     void FixedUpdate () {
         float y = Input.GetAxis("Vertical") * movementSpeed;
         float x = Input.GetAxis("Horizontal") * movementSpeed;
@@ -80,7 +77,6 @@ public class PlayerController : MonoBehaviour {
             mouse2down = false;
         }
 
-
         if (Input.GetButton("Jump")) {
             if (isGrounded()) {
                 rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y + CalculateJumpVerticalSpeed(), rb.velocity.z);
@@ -95,6 +91,5 @@ public class PlayerController : MonoBehaviour {
     private float CalculateJumpVerticalSpeed() {
         return Mathf.Sqrt(2 * jumpHeight * Mathf.Abs(Physics.gravity.y));
     }
-
-
+    
 }

@@ -17,8 +17,7 @@ public class BlockManager : MonoBehaviour {
     public int blockCount = 0;
     public float renderDistance = 64;
     Vector2 previousPlayerChunkCoords;
-
-    // Use this for initialization
+    
     void Start () {
         chunksVisibleInRenderDistance = Mathf.RoundToInt(renderDistance / CHUNKSIZE);
         chunks = new Dictionary<Vector2, Chunk>();
@@ -87,34 +86,6 @@ public class BlockManager : MonoBehaviour {
             return false;
         }
     }
-    /*
-    void UpdateVisibleChunks() {
-
-        for (int i = 0; i < previouslyRenderedChunks.Count; i++) {
-            previouslyRenderedChunks[i].SetVisible(false);
-        }
-        previouslyRenderedChunks.Clear();
-
-        int currentChunkCoordX = Mathf.CeilToInt(player.transform.position.x / CHUNKSIZE);
-        int currentChunkCoordY = Mathf.CeilToInt(player.transform.position.z / CHUNKSIZE);
-
-        for (int yOffset = -chunksVisibleInRenderDistance; yOffset <= chunksVisibleInRenderDistance; yOffset++) {
-            for (int xOffset = -chunksVisibleInRenderDistance; xOffset <= chunksVisibleInRenderDistance; xOffset++) {
-                Vector2 viewedChunkCoord = new Vector2(currentChunkCoordX + xOffset, currentChunkCoordY + yOffset);
-                Debug.Log(chunks.Count);
-                if (chunks.ContainsKey(viewedChunkCoord)) {
-                    chunks[viewedChunkCoord].UpdateChunkVisibility(player.transform.position,renderDistance);
-                    if (chunks[viewedChunkCoord].gameObject.activeSelf) {
-                        previouslyRenderedChunks.Add(chunks[viewedChunkCoord]);
-                    }
-                } else {
-                    GenerateChunk(new Vector3(viewedChunkCoord.x, 0, viewedChunkCoord.y));
-                }
-
-            }
-        }
-    }
-    */
 
     void UpdateVisibleChunks() {
 
@@ -144,15 +115,11 @@ public class BlockManager : MonoBehaviour {
         }
         previousPlayerChunkCoords = playerCoords;
     }
-
-    // Update is called once per frame
+    
     void Update () {
         UpdateVisibleChunks();
 	}
-
- 
 }
-
 
 public class Block {
     public GameObject gameObject;
