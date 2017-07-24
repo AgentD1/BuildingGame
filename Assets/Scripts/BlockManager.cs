@@ -40,10 +40,12 @@ public class BlockManager : MonoBehaviour {
     }
     
     Chunk GenerateChunk(Vector2 position) {
+        
         CreateChunk(position);
         for (int x = -CHUNKSIZE / 2; x < CHUNKSIZE / 2 + 1; x++) { 
             for (int y = -CHUNKSIZE / 2; y < CHUNKSIZE / 2 + 1; y++) {
-                CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), 0, y + (position.y * CHUNKSIZE)));
+                //CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), 0, y + (position.y * CHUNKSIZE)));
+                CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)),0.02567834f,15), y + (position.y * CHUNKSIZE)));
             }
         }
         return chunks[position];
