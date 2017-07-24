@@ -45,7 +45,6 @@ public class PlayerController : MonoBehaviour {
             } else {
                 Cursor.lockState = CursorLockMode.None;
             }
-            Debug.Log(Cursor.lockState);
         }
     }
     
@@ -69,8 +68,6 @@ public class PlayerController : MonoBehaviour {
             Ray ray = cameraGO.GetComponent<Camera>().ScreenPointToRay(new Vector3(cameraGO.GetComponent<Camera>().pixelWidth/2, cameraGO.GetComponent<Camera>().pixelHeight / 2, 0f));  //new Ray(cameraGO.transform.position, cameraGO.transform.rotation.eulerAngles);
             if(Physics.Raycast(ray, out hit, reach, mask)) {
                 blockManager.BlockClick(false, hit);
-            } else {
-                Debug.Log("Not detected");
             }
             mouse1down = false;
         }

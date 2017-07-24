@@ -23,8 +23,8 @@ public class BlockManager : MonoBehaviour {
         chunks = new Dictionary<Vector2, Chunk>();
         previouslyRenderedChunks = new List<Chunk>();
         blocks = new Dictionary<Vector3, Block>();
-        for (int i = -3; i < 4; i++) {
-            for (int j = -3; j < 4; j++) {
+        for (int i = -width / 2; i < width / 2; i++) {
+            for (int j = -height / 2; j < height / 2; j++) {
                 GenerateChunk(new Vector2(i, j));
             }
         }
@@ -32,7 +32,7 @@ public class BlockManager : MonoBehaviour {
 	
     public void BlockClick(bool breaking,RaycastHit hit) {
         if (breaking) {
-//            DestroyBlock(hit.transform.position);
+            DestroyBlock(hit.transform.position);
         } else {
             int clickChunkCoordX = Mathf.CeilToInt(player.transform.position.x / CHUNKSIZE);
             int clickChunkCoordY = Mathf.CeilToInt(player.transform.position.z / CHUNKSIZE);
@@ -68,6 +68,7 @@ public class BlockManager : MonoBehaviour {
             GameObject go = Instantiate(blockPrefab, position, Quaternion.identity, chunks[new Vector2(Mathf.Round(position.x / CHUNKSIZE), Mathf.Round(position.z / CHUNKSIZE))].gameObject.transform);
             Block block = new Block(position, go);
             blocks.Add(position, block);
+            blockCount++;
             return block;
         } else if (blocks.ContainsKey(position)) {
             Debug.LogError("Block already exists at " + position);
@@ -78,33 +79,18 @@ public class BlockManager : MonoBehaviour {
         }
     }
 
-    //bool DestroyBlock(Vector3 position) {
-
-    //}
-
-
+    bool DestroyBlock(Vector3 position) {
+        if (blocks.ContainsKey(position)) {
+            Destroy(blocks[position].gameObject, 0.0001f);
+            blocks.Remove(position);
+            blockCount--;
+            return true;
+        } else {
+            Debug.Log("Block doesn't exist! " + position);
+            return false;
+        }
+    }
     /*
-    public void CreateChunk(Vector3 position) {
-
-        GameObject go = Instantiate(chunkPrefab, new Vector3(position.x*CHUNKSIZE,0,position.z*CHUNKSIZE), Quaternion.identity, transform);
-        
-        chunks.Add(new Vector2(position.x, position.z), new Chunk(position, go));
-        Debug.Log(chunks[new Vector2(position.x, position.z)]);
-    }
-
-    public void CreateBlock(Vector3 position, GameObject chunk) {
-        GameObject go = Instantiate(blockPrefab, position, Quaternion.identity, chunk.transform);
-        blocks.Add(position, new Block(position,go));
-        blockCount++;
-        
-    }
-
-    public void DestroyBlock(Vector3 position) {
-        Destroy(blocks[position].gameObject, 0.001f);
-        blockCount--;
-        blocks.Remove(position);
-    }
-
     void UpdateVisibleChunks() {
 
         for (int i = 0; i < previouslyRenderedChunks.Count; i++) {
@@ -131,18 +117,6 @@ public class BlockManager : MonoBehaviour {
             }
         }
     }
-    void GenerateChunk(Vector3 position) {
-        if (chunks.ContainsKey(new Vector2(position.x, position.z))) { return; }
-        CreateChunk(new Vector2(position.x, position.z));
-
-        for (int i = (int) position.x*CHUNKSIZE; i < position.x*CHUNKSIZE + CHUNKSIZE; i++) {
-            for (int j = (int)position.y * CHUNKSIZE; j < position.y * CHUNKSIZE + CHUNKSIZE; j++) {
-                CreateBlock(new Vector3(i, 0, j), chunks[new Vector2(position.x, position.z)].gameObject);
-            }
-        }
-
-    }
-
     */
 
     // Update is called once per frame
@@ -184,7 +158,7 @@ public class Chunk {
         pos = position;
         gameObject = go;
         bounds = new Bounds(new Vector3(pos.x * BlockManager.CHUNKSIZE, 0, pos.y * BlockManager.CHUNKSIZE), new Vector3(BlockManager.CHUNKSIZE, 500, BlockManager.CHUNKSIZE));
-        SetVisible(false);
+        SetVisible(true);
     }
 
     public void UpdateChunkVisibility(Vector3 playerPos, float renderDistance) {
