@@ -17,11 +17,15 @@ public class BlockManager : MonoBehaviour {
     public int blockCount = 0;
     public float renderDistance = 64;
     Vector2 previousPlayerChunkCoords;
-    public static BlockType[] blockTypes = { new BlockType(Color.white), new BlockType(Color.red), new BlockType(Color.yellow), new BlockType(Color.cyan), new BlockType(Color.black), new BlockType(Color.blue) };
+    public static BlockType[] blockTypes = { new BlockType(0,0), new BlockType(1,0), new BlockType(2,0), new BlockType(3,0) };
     public float scale = 0.025f;
     public float heightMultiplier = 15f;
     public Vector2 offset;
     public int blockBottom;
+    public Mesh blockMesh;
+    public Material blockMat;
+    public Texture2D blockMap;
+    public int pixelSizeForBlockMap;
 
     void Start () {
         chunksVisibleInRenderDistance = Mathf.RoundToInt(renderDistance / CHUNKSIZE);
@@ -30,33 +34,37 @@ public class BlockManager : MonoBehaviour {
         blocks = new Dictionary<Vector3, Block>();
         previousPlayerChunkCoords = new Vector2(1234,1234);
         offset = new Vector2(Random.Range(-100000, 100000), Random.Range(-100000, 100000));
-
+        Debug.Log("Started");
     }
 	
     public void BlockClick(bool breaking, RaycastHit hit, int id) {
         if (breaking) {
-            DestroyBlock(hit.transform.position);
+            Vector3 unRounded = hit.point - hit.normal * 0.5f;
+            Vector3 blockPos = new Vector3 (Mathf.Round(unRounded.x), Mathf.Round(unRounded.y), Mathf.Round(unRounded.z));
+            DestroyBlock(blockPos);
+            UpdateChunkMesh(new Vector2(Mathf.Round(blockPos.x / CHUNKSIZE), Mathf.Round(blockPos.z / CHUNKSIZE)));
         } else {
-            int clickChunkCoordX = Mathf.CeilToInt(player.transform.position.x / CHUNKSIZE);
-            int clickChunkCoordY = Mathf.CeilToInt(player.transform.position.z / CHUNKSIZE);
-            CreateBlock(hit.transform.position + hit.normal);
-            blocks[hit.transform.position + hit.normal].gameObject.GetComponent<MeshRenderer>().material.color = blockTypes[id].color;
+            Vector3 unRounded = hit.point + hit.normal * 0.25f;
+            Vector3 blockPos = new Vector3(Mathf.Round(unRounded.x), Mathf.Round(unRounded.y), Mathf.Round(unRounded.z));
+            CreateBlock(blockPos);
+            blocks[blockPos].id = id;
+            UpdateChunkMesh(new Vector2(Mathf.Round(blockPos.x / CHUNKSIZE), Mathf.Round(blockPos.z / CHUNKSIZE)));
         }
         
     }
     
     Chunk GenerateChunk(Vector2 position) {
-        
         CreateChunk(position);
         for (int x = -CHUNKSIZE / 2; x < CHUNKSIZE / 2 + 1; x++) { 
             for (int y = -CHUNKSIZE / 2; y < CHUNKSIZE / 2 + 1; y++) {
                 //CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), 0, y + (position.y * CHUNKSIZE)));
-                for (int i = blockBottom; i < TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)) + offset, scale, heightMultiplier); i++) {
-                    CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), i, y + (position.y * CHUNKSIZE)));
-                }
-                
+                //for (int i = blockBottom; i < TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)) + offset, scale, heightMultiplier); i++) {
+                //    CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), i, y + (position.y * CHUNKSIZE)));
+                //}
+                CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)) + offset, scale, heightMultiplier), y + (position.y * CHUNKSIZE)));
             }
         }
+        UpdateChunkMesh(position);
         return chunks[position];
     }
 
@@ -65,7 +73,11 @@ public class BlockManager : MonoBehaviour {
             Debug.Log("Chunk already exists at " + position);
             return chunks[position];
         } else {
-            GameObject go = Instantiate(chunkPrefab, new Vector3(position.x * CHUNKSIZE, 0, position.y * CHUNKSIZE), Quaternion.identity, transform);
+            GameObject go = Instantiate(chunkPrefab, Vector3.zero, Quaternion.identity, transform);
+            go.AddComponent<MeshFilter>();
+            go.AddComponent<MeshRenderer>();
+            go.AddComponent<MeshCollider>();
+            go.layer = 8;
             Chunk chunk = new Chunk(position, go);
             chunks.Add(position, chunk);
             return chunk;
@@ -73,9 +85,9 @@ public class BlockManager : MonoBehaviour {
     }
 
     Block CreateBlock(Vector3 position) {
-        if (chunks.ContainsKey(new Vector2(Mathf.Round(position.x / CHUNKSIZE), Mathf.Round(position.z / CHUNKSIZE)))) {
-            GameObject go = Instantiate(blockPrefab, position, Quaternion.identity, chunks[new Vector2(Mathf.Round(position.x / CHUNKSIZE), Mathf.Round(position.z / CHUNKSIZE))].gameObject.transform);
-            Block block = new Block(position, go);
+        if (chunks.ContainsKey(new Vector2(Mathf.Round(position.x / CHUNKSIZE), Mathf.Round(position.z / CHUNKSIZE))) && !blocks.ContainsKey(position)) {
+            Block block = new Block(position);
+            chunks[new Vector2(Mathf.Round(position.x / CHUNKSIZE), Mathf.Round(position.z / CHUNKSIZE))].blocksInChunk.Add(block);
             blocks.Add(position, block);
             blockCount++;
             return block;
@@ -90,14 +102,147 @@ public class BlockManager : MonoBehaviour {
 
     bool DestroyBlock(Vector3 position) {
         if (blocks.ContainsKey(position)) {
-            Destroy(blocks[position].gameObject, 0.0001f);
+            chunks[new Vector2(Mathf.Round(position.x / CHUNKSIZE), Mathf.Round(position.z / CHUNKSIZE))].blocksInChunk.Remove(blocks[position]);
             blocks.Remove(position);
             blockCount--;
+            UpdateChunkMesh(new Vector2(Mathf.Round(position.x / CHUNKSIZE), Mathf.Round(position.z / CHUNKSIZE)));
             return true;
         } else {
             Debug.Log("Block doesn't exist! " + position);
             return false;
         }
+    }
+
+    void UpdateChunkMesh(Vector2 chunk) {
+        Mesh mesh = new Mesh();
+        List<Vector3> verticies = new List<Vector3>();
+        List<int> triangles = new List<int>();
+        List<Vector2> uvs = new List<Vector2>();
+        for (int i = 0; i < chunks[chunk].blocksInChunk.Count; i++) {
+            //0 top 1 bottom 2 north 3 south 4 east 5 west
+
+            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.up)) {
+                triangles.Add(verticies.Count + 0);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 3);
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+
+            }
+
+            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.down)) {
+                triangles.Add(verticies.Count + 0);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 3);
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+
+            }
+
+
+            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.back)) {
+                triangles.Add(verticies.Count + 0);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 3);
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+
+            }
+
+
+            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.forward)) {
+                triangles.Add(verticies.Count + 0);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 3);
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+
+            }
+
+
+            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.left)) {
+                triangles.Add(verticies.Count + 0);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 3);
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x - 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+
+            }
+
+
+            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.right)) {
+                triangles.Add(verticies.Count + 0);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 1);
+                triangles.Add(verticies.Count + 2);
+                triangles.Add(verticies.Count + 3);
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z + 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y - 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                verticies.Add(new Vector3(chunks[chunk].blocksInChunk[i].pos.x + 0.5f, chunks[chunk].blocksInChunk[i].pos.y + 0.5f, chunks[chunk].blocksInChunk[i].pos.z - 0.5f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY));
+                uvs.Add(new Vector2(blockTypes[chunks[chunk].blocksInChunk[i].id].texX + 0.0625f, blockTypes[chunks[chunk].blocksInChunk[i].id].texY + 0.0625f));
+
+            }
+
+
+        }
+        mesh.SetVertices(verticies);
+        mesh.SetTriangles(triangles, 0);
+        mesh.RecalculateNormals();
+        mesh.SetUVs(0, uvs);
+
+        chunks[chunk].gameObject.GetComponent<MeshFilter>().mesh = mesh;
+        chunks[chunk].gameObject.GetComponent<MeshRenderer>().material = blockMat;
+        chunks[chunk].gameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
     }
 
     void UpdateVisibleChunks() {
@@ -134,18 +279,9 @@ public class BlockManager : MonoBehaviour {
 }
 
 public class Block {
-    public GameObject gameObject;
-
     public Vector3 pos;
-    
-    public Block(Vector3 position, GameObject go) {
-        pos = position;
-        gameObject = go;
-    }
-    public Block(int xPos, int yPos, int zPos, GameObject go) {
-        pos = new Vector3(xPos, yPos, zPos);
-        gameObject = go;
-    }
+    public int id;
+
     public Block(Vector3 position) {
         pos = position;
     }
@@ -158,12 +294,14 @@ public class Chunk {
     public GameObject gameObject;
     public Vector2 pos;
     Bounds bounds;
+    public List<Block> blocksInChunk;
 
     public Chunk(Vector2 position, GameObject go) {
         pos = position;
         gameObject = go;
         bounds = new Bounds(new Vector3(pos.x * BlockManager.CHUNKSIZE, 0, pos.y * BlockManager.CHUNKSIZE), new Vector3(BlockManager.CHUNKSIZE, 500, BlockManager.CHUNKSIZE));
         SetVisible(true);
+        blocksInChunk = new List<Block>();
     }
 
     public void UpdateChunkVisibility(Vector3 playerPos, float renderDistance) {
@@ -179,10 +317,13 @@ public class Chunk {
 }
 
 public class BlockType {
-    public Color color;
+    public float texX;
+    public float texY;
     public string name;
-    public BlockType(Color c) {
-        color = c;
-        name = color.ToString();
+    public BlockType(float x, float y) {
+        texX = x * 0.0625f;
+        texY = y * 0.0625f;
+        Debug.Log(texY);
+        name = x + " " + y;
     }
 }
