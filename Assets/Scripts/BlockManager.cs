@@ -17,7 +17,7 @@ public class BlockManager : MonoBehaviour {
     public int blockCount = 0;
     public float renderDistance = 64;
     Vector2 previousPlayerChunkCoords;
-    public static BlockType[] blockTypes = { new BlockType(0,0), new BlockType(1,0), new BlockType(2,0), new BlockType(3,0) };
+    public static BlockType[] blockTypes = { new BlockType(0, 0), new BlockType(1, 0), new BlockType(2, 0), new BlockType(3, 0), new BlockType(0, 1), new BlockType(1, 1), new BlockType(2, 1), new BlockType(3, 1), new BlockType(0, 2), new BlockType(1, 2), new BlockType(2, 2), new BlockType(3, 2), new BlockType(0, 3), new BlockType(1, 3), new BlockType(2, 3), new BlockType(3, 3), };
     public float scale = 0.025f;
     public float heightMultiplier = 15f;
     public Vector2 offset;
@@ -57,11 +57,11 @@ public class BlockManager : MonoBehaviour {
         CreateChunk(position);
         for (int x = -CHUNKSIZE / 2; x < CHUNKSIZE / 2 + 1; x++) { 
             for (int y = -CHUNKSIZE / 2; y < CHUNKSIZE / 2 + 1; y++) {
-                //CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), 0, y + (position.y * CHUNKSIZE)));
-                //for (int i = blockBottom; i < TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)) + offset, scale, heightMultiplier); i++) {
-                //    CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), i, y + (position.y * CHUNKSIZE)));
-                //}
-                CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)) + offset, scale, heightMultiplier), y + (position.y * CHUNKSIZE)));
+                
+                for (int i = blockBottom; i < TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)) + offset, scale, heightMultiplier); i++) {
+                    CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), i, y + (position.y * CHUNKSIZE)));
+                }
+                //CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)) + offset, scale, heightMultiplier), y + (position.y * CHUNKSIZE)));
             }
         }
         UpdateChunkMesh(position);
@@ -119,7 +119,7 @@ public class BlockManager : MonoBehaviour {
         List<int> triangles = new List<int>();
         List<Vector2> uvs = new List<Vector2>();
         for (int i = 0; i < chunks[chunk].blocksInChunk.Count; i++) {
-            //0 top 1 bottom 2 north 3 south 4 east 5 west
+            //TODO fix neighboring chunks not updating on block destroy, resulting in transparent face
 
             if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.up)) {
                 triangles.Add(verticies.Count + 0);
@@ -288,6 +288,7 @@ public class Block {
     public Block(int xPos, int yPos, int zPos) {
         pos = new Vector3(xPos, yPos, zPos);
     }
+    
 }
 
 public class Chunk {
@@ -323,7 +324,6 @@ public class BlockType {
     public BlockType(float x, float y) {
         texX = x * 0.0625f;
         texY = y * 0.0625f;
-        Debug.Log(texY);
         name = x + " " + y;
     }
 }
