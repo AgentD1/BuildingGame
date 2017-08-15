@@ -120,8 +120,8 @@ public class BlockManager : MonoBehaviour {
         List<Vector2> uvs = new List<Vector2>();
         for (int i = 0; i < chunks[chunk].blocksInChunk.Count; i++) {
             //TODO fix neighboring chunks not updating on block destroy, resulting in transparent face
-
-            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.up)) {
+            Block tempVar;
+            if (!blocks.TryGetValue(chunks[chunk].blocksInChunk[i].pos + Vector3.up, out tempVar)) {
                 triangles.Add(verticies.Count + 0);
                 triangles.Add(verticies.Count + 1);
                 triangles.Add(verticies.Count + 2);
@@ -139,7 +139,7 @@ public class BlockManager : MonoBehaviour {
 
             }
 
-            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.down)) {
+            if ( !blocks.TryGetValue(chunks[chunk].blocksInChunk[i].pos + Vector3.down, out tempVar) ) {//!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.down)) {
                 triangles.Add(verticies.Count + 0);
                 triangles.Add(verticies.Count + 2);
                 triangles.Add(verticies.Count + 1);
@@ -158,7 +158,7 @@ public class BlockManager : MonoBehaviour {
             }
 
 
-            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.back)) {
+            if (!blocks.TryGetValue(chunks[chunk].blocksInChunk[i].pos + Vector3.back, out tempVar)) {
                 triangles.Add(verticies.Count + 0);
                 triangles.Add(verticies.Count + 1);
                 triangles.Add(verticies.Count + 2);
@@ -177,7 +177,7 @@ public class BlockManager : MonoBehaviour {
             }
 
 
-            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.forward)) {
+            if (!blocks.TryGetValue(chunks[chunk].blocksInChunk[i].pos + Vector3.forward, out tempVar)) {
                 triangles.Add(verticies.Count + 0);
                 triangles.Add(verticies.Count + 2);
                 triangles.Add(verticies.Count + 1);
@@ -196,7 +196,7 @@ public class BlockManager : MonoBehaviour {
             }
 
 
-            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.left)) {
+            if (!blocks.TryGetValue(chunks[chunk].blocksInChunk[i].pos + Vector3.left, out tempVar)) {
                 triangles.Add(verticies.Count + 0);
                 triangles.Add(verticies.Count + 1);
                 triangles.Add(verticies.Count + 2);
@@ -215,7 +215,7 @@ public class BlockManager : MonoBehaviour {
             }
 
 
-            if (!blocks.ContainsKey(chunks[chunk].blocksInChunk[i].pos + Vector3.right)) {
+            if (!blocks.TryGetValue(chunks[chunk].blocksInChunk[i].pos + Vector3.right, out tempVar)) {
                 triangles.Add(verticies.Count + 0);
                 triangles.Add(verticies.Count + 2);
                 triangles.Add(verticies.Count + 1);
