@@ -42,13 +42,13 @@ public class BlockManager : MonoBehaviour {
             Vector3 unRounded = hit.point - hit.normal * 0.5f;
             Vector3 blockPos = new Vector3 (Mathf.Round(unRounded.x), Mathf.Round(unRounded.y), Mathf.Round(unRounded.z));
             DestroyBlock(blockPos);
-            UpdateChunkMesh(new Vector2(Mathf.Round(blockPos.x / CHUNKSIZE), Mathf.Round(blockPos.z / CHUNKSIZE)));
+            UpdateChunkMesh(new Vector2(Mathf.Round(blockPos.x / CHUNKSIZE), Mathf.Round(blockPos.z / CHUNKSIZE)), true);
         } else {
             Vector3 unRounded = hit.point + hit.normal * 0.25f;
             Vector3 blockPos = new Vector3(Mathf.Round(unRounded.x), Mathf.Round(unRounded.y), Mathf.Round(unRounded.z));
             CreateBlock(blockPos);
             blocks[blockPos].id = id;
-            UpdateChunkMesh(new Vector2(Mathf.Round(blockPos.x / CHUNKSIZE), Mathf.Round(blockPos.z / CHUNKSIZE)));
+            UpdateChunkMesh(new Vector2(Mathf.Round(blockPos.x / CHUNKSIZE), Mathf.Round(blockPos.z / CHUNKSIZE)), true);
         }
         
     }
@@ -64,7 +64,7 @@ public class BlockManager : MonoBehaviour {
                 //CreateBlock(new Vector3(x + (position.x * CHUNKSIZE), TerrainGenerator.GenerateHeightForBlock(new Vector2(x + (position.x * CHUNKSIZE), y + (position.y * CHUNKSIZE)) + offset, scale, heightMultiplier), y + (position.y * CHUNKSIZE)));
             }
         }
-        UpdateChunkMesh(position);
+        UpdateChunkMesh(position, false);
         return chunks[position];
     }
 
@@ -105,7 +105,7 @@ public class BlockManager : MonoBehaviour {
             chunks[new Vector2(Mathf.Round(position.x / CHUNKSIZE), Mathf.Round(position.z / CHUNKSIZE))].blocksInChunk.Remove(blocks[position]);
             blocks.Remove(position);
             blockCount--;
-            UpdateChunkMesh(new Vector2(Mathf.Round(position.x / CHUNKSIZE), Mathf.Round(position.z / CHUNKSIZE)));
+            UpdateChunkMesh(new Vector2(Mathf.Round(position.x / CHUNKSIZE), Mathf.Round(position.z / CHUNKSIZE)), true);
             return true;
         } else {
             Debug.Log("Block doesn't exist! " + position);
@@ -113,7 +113,7 @@ public class BlockManager : MonoBehaviour {
         }
     }
 
-    void UpdateChunkMesh(Vector2 chunk) {
+    void UpdateChunkMesh(Vector2 chunk, bool updateOtherChunks) {
         Mesh mesh = new Mesh();
         List<Vector3> verticies = new List<Vector3>();
         List<int> triangles = new List<int>();
